@@ -1,13 +1,30 @@
 #!/usr/bin/env python
-################################################################################
-# yubi_goog.py - google authenticator via yubikey
-#
-# Use --generate to generate OTPs given a base 32 secret key (from google)
-# Use --yubi to send a challenge to the yubikey to generate OTPs
-# Use --convert-secret to convert the google secret into hex
-#
-# author: Casey Link <unnamedrambler@gmail.com>
-################################################################################
+'''
+    Generate TOTP tokens utilising HOTP functions of the Yubikey.
+    Get your Yubikeys here: https://www.yubico.com/
+
+    The MIT License (MIT)
+
+    Copyright (c) 2016 Greenhost
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+'''
 
 import base64
 import re
@@ -18,120 +35,230 @@ import subprocess
 import hashlib
 import hmac
 import struct
+import argparse
+import pyautogui
+from messages import INSTRUCTIONS
 
-ADJACENT_INTERVALS = 3 # generate 3 OTPs
-TIME_STEP = 30 # default as per TOTP spec
+__author__ = ["Chris Snijder"]
+__copyright__ = "MIT"
+__license__ = "The MIT License (MIT)"
+__version__ = "0.1"
+__credits__ = "Based on yubi-goog.py by Casey Link <unnamedrambler@gmail.com>"
 
-# Use sudo when invoking ykchalresp
 USE_SUDO = True
 
-# supporting py2 and py3 sucks
-IS_PY3 = sys.version_info[0] == 3
 
-def mangle_hash(h):
-    if IS_PY3:
-        offset = h[-1] & 0x0F
+def main():
+    ''' Figure out what the user intends to do and call the corresponding
+        functions, to find out which functions are supported use the --help
+        argument.
+    '''
+
+    args = {}
+    if len(sys.argv) > 1:
+
+        parser = argparse.ArgumentParser(
+            prog=__name__,
+            description='Generate TOTP token with your Yubikey.',
+            conflict_handler='resolve'
+        )
+
+        sparser = parser.add_subparsers(
+            title='Positional arguments',
+            metavar='[subcommands]',
+            dest='command',
+        )
+
+        setup = sparser.add_parser(
+            'setup',
+            help='Convert your TOTP secret to a Yubikey compatible format.'
+        )
+
+        hid = sparser.add_parser(
+            'hid',
+            help='Enter TOTP token generatd by Yubikey (keyboard emulation).'
+        )
+
+        yubi = sparser.add_parser(
+            'yubi',
+            help='Output TOTP token generatd by Yubikey.'
+        )
+
+        generate = sparser.add_parser(
+            'generate',
+            help='Generate a valid TOTP token.',
+        )
+
+        for obj in (hid, setup, generate):
+            obj.add_argument(
+                '-s',
+                '--secret',
+                required=False,
+                metavar='[secret]',
+                help='Specify the Google Authentication secret.',
+                type=str
+            )
+
+        for obj in (yubi, hid):
+            obj.add_argument(
+                '--slot',
+                required=False,
+                metavar='[1/2]',
+                help='In which Yubikey slot did you save your secret?',
+                type=int,
+                default=1
+            )
+
+        hid.add_argument(
+            '--speed',
+            metavar='[50ms]',
+            help='How fast should I type? (emulation)',
+            type=int,
+            default=50,
+            dest='emulate_speed'
+        )
+
+        hid.add_argument(
+            '--return',
+            action="store_true",
+            help='Should I press enter after entering your token? (emulation)',
+            dest='emulate_return'
+        )
+
+        args = parser.parse_args().__dict__
+
+    ytg = TokenGenerator()
+
+    if 'command' in args.keys():
+        command = args['command']
     else:
-        offset = ord(h[-1]) & 0x0F
-    truncated_hash = h[offset:offset+4]
+        command = 'generate'
 
-    code = struct.unpack(">L", truncated_hash)[0]
-    code &= 0x7FFFFFFF;
-    code %= 1000000;
-
-    return '{0:06d}'.format(code)
-
-def totp(secret, tm):
-    bin_key = binascii.unhexlify(secret)
-    h = hmac.new(bin_key, tm, hashlib.sha1).digest()
-
-    return mangle_hash(h)
-
-def generate_challenges(intervals = ADJACENT_INTERVALS):
-    """
-    intervals: must be odd number
-
-    generates intervals-number total challenges. used to
-    workaround clock skew.
-    """
-    challenges = []
-    t = int(time.time())
-    for ix in range(0-int(intervals/2), int(intervals/2)+1):
-        tm = (t + TIME_STEP*ix)/TIME_STEP
-        tm = struct.pack('>q', int(tm))
-        challenges.append(tm)
-    return challenges
-
-def decode_secret(secret):
-    """
-    Decodes the base32 string google provides" to hex
-    """
-    # remove spaces and uppercase
-    secret = re.sub(r'\s', '', secret).upper()
-    secret = secret.encode('ascii')
-    secret = base64.b32decode(secret)
-    return binascii.hexlify(secret)
-
-def get_secret():
-    """
-    Read secret from user
-    """
-
-    if IS_PY3:
-        google_key = input("Google key: ")
-    else:
-        google_key = raw_input("Google key: ")
-    return decode_secret(google_key)
-
-def convert_secret():
-    secret = get_secret()
-    print(secret.decode())
-
-def generate():
-    # convert secret to hex
-    secret = get_secret()
-    # now, and 30 seconds ahead and behind
-    for chal in generate_challenges():
-        print("OTP: %s" %( totp(secret, chal) ))
+    if command in ['setup', 'generate']:
+        secret = args.pop('secret', None)
+        secret = ytg.get_secret(secret)
+    if command == 'setup':
+        print INSTRUCTIONS['en']['setup'] % ytg.setup(secret)
+    elif command == 'generate':
+        print INSTRUCTIONS['en']['generate'] % ytg.totp(secret)
+    elif command == 'yubi':
+        print INSTRUCTIONS['en']['generate'] % ytg.yubi(args['slot'])
+    elif command == 'hid':
+        ytg.yubi(
+            args['slot'],
+            emulate_keyboard=True,
+            emulate_speed=args['emulate_speed'] / 1000,
+            emulate_return=args['emulate_return']
+        )
 
 
-def yubi():
-    for chal in generate_challenges():
+class TokenGenerator(object):
+    ''' YubiGoog - Google Authenticator functions for Yubikey
+    '''
+
+    TIME_STEP = 30
+
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return ''
+
+    @staticmethod
+    def get_secret(secret=None):
+        ''' Get the secret from the command line arguments or ask for it
+            interactively if not set.
+        '''
+        if secret is None:
+            secret = raw_input("Google Authentication secret: ")
+
+        secret = re.sub(r'\s', '', secret).upper()
+        secret = secret.encode('ascii')
+        return base64.b32decode(secret)
+
+    @staticmethod
+    def mangle_hash(sha1_h):
+        ''' Extract a 6 digit pin from a sha1 hash
+        '''
+        offset = ord(sha1_h[-1]) & 0x0F
+        truncated_hash = sha1_h[offset:offset+4]
+
+        code = struct.unpack(">L", truncated_hash)[0]
+        code &= 0x7FFFFFFF
+        code %= 1000000
+
+        return '{0:06d}'.format(code)
+
+    def totp(self, secret, chal=None):
+        '''
+            Generate a raw TOTP token
+        '''
+        if chal is None:
+            chal = self.generate_challenge()
+
+        hex_hash = hmac.new(
+            secret,
+            chal,
+            hashlib.sha1
+        ).digest()
+
+        return self.mangle_hash(hex_hash)
+
+    def generate_challenge(self, flttime=None):
+        """ Generate challenge
+        """
+        if flttime is None:
+            flttime = time.time()
+
+        chal = int(flttime)/self.TIME_STEP
+        chal = struct.pack('>q', int(chal))
+
+        return chal
+
+    @staticmethod
+    def setup(secret):
+        '''
+            Convert the secret from binary to a hexlified string.
+        '''
+        if len(secret) != 20:
+            print INSTRUCTIONS['en']['short_secret']
+            exit(1)
+        return binascii.hexlify(secret)
+
+    def yubi(self, yubi_slot=1, emulate_keyboard=False, emulate_return=False,
+             emulate_speed=0.05):
+        '''
+            Instead of using a supplied secret, let the Yubikey do the
+            challenge response.
+        '''
+        chal = self.generate_challenge()
         chal = binascii.hexlify(chal)
-        cmd = []
+
         if USE_SUDO:
             cmd = ['sudo']
-        cmd.append('ykchalresp')
-        cmd.append('-2x')
-        cmd.append(chal)
-        if hasattr(subprocess, "check_output"):
-            try:
-                resp = subprocess.check_output(cmd).strip()
-            except subprocess.CalledProcessError:
-                sys.exit(1)
         else:
-            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            out, err = proc.communicate()
-            if not isinstance(out, basestring):
-                raise ValueError("Command {0} returned {1!r}."
-                                 .format(" ".join(cmd), out))
-            resp = out.strip()
-        print("OTP: %s" %(mangle_hash(binascii.unhexlify(resp))))
+            cmd = []
 
-def error():
-    print("Valid opts: --generate,  --yubi, or --convert-secret")
+        cmd += [
+            'ykchalresp',
+            '-%dx' % yubi_slot,
+            chal
+        ]
+
+        try:
+            resp = subprocess.check_output(cmd).strip()
+        except subprocess.CalledProcessError:
+            sys.exit(1)
+
+        token = self.mangle_hash(binascii.unhexlify(resp))
+
+        if emulate_keyboard:
+            pyautogui.typewrite(token, emulate_speed)
+            if emulate_return:
+                pyautogui.press('return')
+        else:
+            return token
+
 
 if __name__ == "__main__":
-    if len(sys.argv) <= 1:
-        yubi()
-        sys.exit(1)
-    if sys.argv[1] == "--generate":
-        generate()
-    elif sys.argv[1] == "--yubi":
-        yubi()
-    elif sys.argv[1] == "--convert-secret":
-        convert_secret()
-    else:
-        error()
-        sys.exit(1)
-
+    main()
