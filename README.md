@@ -19,6 +19,7 @@ Google Authenticator is great, but I don't really want to be tied to my mobile p
    secret key.
 3. Run `yubi_goog.py setup` this will prompt you for your base32-encoded secret and output a result in hex.
 4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key. I had to use the [GUI tool available from Yubico][tool]
+   Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64`. This will insert the secret in slot 2 of your yubikey (use -1 for slot 1)
 5. Whenever you are prompted for a one-time password from google, just run `yubi_goog.py yubi` and the output will be a one-time password usable for up to one minute 30 seconds.
 
     Alternatively, run `yubi_goog.py hid` to employ keyboard emulation that will type the token for you.
