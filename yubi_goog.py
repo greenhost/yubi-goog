@@ -167,28 +167,33 @@ def main():
         dest='emulate_return'
     )
 
-    args = parser.parse_args().__dict__
+    try:
+        args = parser.parse_args().__dict__
 
-    if 'command' in args.keys():
-        command = args['command']
-    else:
-        parser.print_help()
+        if 'command' in args.keys():
+            command = args['command']
+        else:
+            parser.print_help()
+            exit(1)
+
+        if command == 'setup':
+            secret = args.pop('secret', None)
+            secret = ytg_get_secret(secret)
+        if command == 'setup':
+            print INSTRUCTIONS['en']['setup'] % ytg_setup(secret)
+        elif command == 'yubi':
+            print INSTRUCTIONS['en']['generate'] % ytg_yubi(args['slot'])
+        elif command == 'hid':
+            ytg_yubi(
+                args['slot'],
+                emulate_keyboard=True,
+                emulate_speed=args['emulate_speed'] / 1000,
+                emulate_return=args['emulate_return']
+            )
+    except KeyboardInterrupt:
+        print ''
         exit(1)
 
-    if command == 'setup':
-        secret = args.pop('secret', None)
-        secret = ytg_get_secret(secret)
-    if command == 'setup':
-        print INSTRUCTIONS['en']['setup'] % ytg_setup(secret)
-    elif command == 'yubi':
-        print INSTRUCTIONS['en']['generate'] % ytg_yubi(args['slot'])
-    elif command == 'hid':
-        ytg_yubi(
-            args['slot'],
-            emulate_keyboard=True,
-            emulate_speed=args['emulate_speed'] / 1000,
-            emulate_return=args['emulate_return']
-        )
 
 if __name__ == "__main__":
     main()
