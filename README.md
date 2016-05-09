@@ -17,21 +17,20 @@ Google Authenticator is great, but I don't really want to be tied to my mobile p
 1. Set up Google Authenticator on your Google settings like you would for a mobile phone.
 2. Below the QR code, press the expand button so you can see your base32-encoded
    secret key.
-3. Run `yubi_goog.py setup` this will prompt you for your base32-encoded secret and output a result in hex.
+3. Run `./yubi_goog.py setup` this will prompt you for your base32-encoded secret and output a result in hex.
 4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key. I had to use the [GUI tool available from Yubico][tool]
    Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64`. This will insert the secret in slot 2 of your yubikey (use -1 for slot 1)
-5. Whenever you are prompted for a one-time password from google, just run `yubi_goog.py yubi` and the output will be a one-time password usable for up to one minute 30 seconds.
+5. Whenever you are prompted for a one-time password from google, just run `./yubi_goog.py yubi` and the output will be a one-time password usable for up to one minute 30 seconds.
 
-    Alternatively, run `yubi_goog.py hid` to employ keyboard emulation that will type the token for you.
+    Alternatively, run `./yubi_goog.py hid` to employ keyboard emulation that will type the token for you.
     __Hint:__ Use this with a keyboard shortcut!
 
 Options for each sub-command can be discovered with the `-h` flag, e.g.: 
 
 ```console
 $ ./yubi_goog.py hid -h
-Xlib.protocol.request.QueryExtension
-usage: __main__ hid [-h] [-s [secret]] [--slot [1/2]] [--speed [50ms]]
-                    [--return]
+usage: ./yubi_goog.py hid [-h] [-s [secret]] [--slot [1/2]] [--speed [50ms]]
+                          [--return]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -41,7 +40,6 @@ optional arguments:
   --speed [50ms]        How fast should I type? (emulation)
   --return              Should I press enter after entering your token?
                         (emulation)
-
 ```
 
 [tool]: http://wiki.yubico.com/files/YubiKey%20Personalization%20Tool%20Installer-lin.tgz
