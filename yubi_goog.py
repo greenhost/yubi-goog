@@ -38,10 +38,13 @@ from messages import INSTRUCTIONS
 __author__ = ["Chris Snijder"]
 __copyright__ = "MIT"
 __license__ = "The MIT License (MIT)"
-__version__ = "0.1"
-__credits__ = "Based on yubi-goog.py by Casey Link <unnamedrambler@gmail.com>"
+__version__ = "0.2"
+__credits__ = (
+                "Loosely Based on yubi-goog.py by Casey Link "
+                "<unnamedrambler@gmail.com>"
+            )
 
-USE_SUDO = True
+USE_SUDO = False
 
 
 def ytg_get_secret(secret=None):
