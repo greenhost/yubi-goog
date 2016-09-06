@@ -32,7 +32,6 @@ import binascii
 import sys
 import subprocess
 import argparse
-import pyautogui
 from messages import INSTRUCTIONS
 
 __author__ = ["Chris Snijder"]
@@ -91,6 +90,7 @@ def ytg_yubi(yubi_slot=1, emulate_keyboard=False, emulate_return=False,
         sys.exit(1)
 
     if emulate_keyboard:
+        import pyautogui
         pyautogui.typewrite(token, emulate_speed)
         if emulate_return:
             pyautogui.press('return')
