@@ -7,7 +7,7 @@ Google Authenticator is great, but I don't really want to be tied to my mobile p
 ## Prerequisites
 
 * Python >=2.7
-* `ykchalresp` (found in the yubikey-personalization package)
+* `ykchalresp > 1.15.0` (found in the yubikey-personalization package)
 * Yubikey
 * [Cross-platform GUI Personalization tool][tool]
 * `pyautogui` - Run: `sudo pip install pyautogui` to install it.
