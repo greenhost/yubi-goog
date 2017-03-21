@@ -1,0 +1,9 @@
+PyAutoGUI==0.9.35
+PyMsgBox==1.0.6
+PyTweening==1.0.3
+argparse==1.2.1
+python-xlib==0.19
+python-yubico==1.3.2
+pyusb==1.0.0
+six==1.10.0
+wsgiref==0.1.2

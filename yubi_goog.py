@@ -32,6 +32,9 @@ import binascii
 import sys
 import subprocess
 import argparse
+import time
+import struct
+import yubico
 from messages import INSTRUCTIONS
 
 __author__ = ["Chris Snijder"]
@@ -44,7 +47,7 @@ __credits__ = (
             )
 
 USE_SUDO = False
-
+DEFAULT_STEP = 30
 
 def ytg_get_secret(secret=None):
     """
@@ -69,29 +72,20 @@ def ytg_setup(secret):
     return binascii.hexlify(secret)
 
 
-def ytg_yubi(yubi_slot=1, emulate_keyboard=False, emulate_return=False,
-             emulate_speed=0.05):
+def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
+             emulate_return=False, emulate_speed=0.05):
     """
         Instead of using a supplied secret, let the Yubikey do the
         challenge response.
     """
-    if USE_SUDO:
-        cmd = ['sudo']
-    else:
-        cmd = []
-
-    cmd += [
-        'ykchalresp',
-        '-t',
-        '-6',
-        '-%d' % yubi_slot
-    ]
-
-    try:
-        token = subprocess.check_output(cmd).strip()
-    except subprocess.CalledProcessError:
-        sys.exit(1)
-
+    yk = yubico.find_yubikey(debug=False)
+    secret = struct.pack(
+        "> Q", int(time.time()) / DEFAULT_STEP).ljust(64, chr(0x0))
+    response = yk.challenge_response(secret, slot=yubi_slot)
+    token = '%.*i' % (
+        digits,
+        yubico.yubico_util.hotp_truncate(response, length=digits)
+    )
     if emulate_keyboard:
         import pyautogui
         pyautogui.typewrite(token, emulate_speed)
@@ -164,6 +158,14 @@ def main():
     )
 
     hid.add_argument(
+        '--digits',
+        metavar='[6/8]',
+        help='How many digits should the output have?',
+        type=int,
+        default=6
+    )
+
+    hid.add_argument(
         '--return',
         action="store_true",
         help='Should I press enter after entering your token? (emulation)',
@@ -185,10 +187,12 @@ def main():
         if command == 'setup':
             print INSTRUCTIONS['en']['setup'] % ytg_setup(secret)
         elif command == 'yubi':
-            print INSTRUCTIONS['en']['generate'] % ytg_yubi(args['slot'])
+            print INSTRUCTIONS['en']['generate'] % ytg_yubi(
+                args['slot'], args['digits'])
         elif command == 'hid':
             ytg_yubi(
                 args['slot'],
+                args['digits'],
                 emulate_keyboard=True,
                 emulate_speed=args['emulate_speed'] / 1000,
                 emulate_return=args['emulate_return']
