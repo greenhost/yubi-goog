@@ -5,16 +5,27 @@ import re
 
 INSTRUCTIONS = {
     'en': {
-        'setup': '''
-                    Yubikey compatible secret: \033[01;32m%s\033[0m
-                    Program it into one of the Yubikey's slots by using the \
-                    Yubikey personalisation tool. Select the HOTP option.
-                 ''',
-        'generate': 'Your generated TOTP token: \033[01;32m%s\033[0m',
-        'short_secret': '''
-                        Your secret needs to be 20 characters long for this \
-                        to work (160 bit secret).
-                    '''
+        'setup': (
+                    'Yubikey compatible secret: \033[01;32m{}\033[0m'
+                    'Program it into one of the Yubikey\'s slots by using the'
+                    'Yubikey personalisation tool. Select the HOTP option.'
+                ),
+        'generate': 'Your generated TOTP token: \033[01;32m{}\033[0m',
+        'short_secret': (
+                        'Your secret needs to be 20 characters long for this'
+                        'to work (160 bit secret).'
+                    ),
+        'usb_error_udev': (
+                        'To allow this tool to access your Yubikey, you need '
+                        'to run the following, to add a rule in your udev '
+                        'configuration.\n\n'
+                        'sudo cat <<EOF >> /etc/udev/rules.d/10-security-keys'
+                        '.rules\n'
+                        'SUBSYSTEMS=="usb", ATTRS{idVendor}=="1050", ATTRS'
+                        '{idProduct}=="0111|0113|0114|0115|0116|0120|0402|0403'
+                        '|0406|0407|0410", TAG+="uaccess"\n\n'
+                        'Then remove your Yubikey and plug it back in.'
+                    )
     }
 }
 

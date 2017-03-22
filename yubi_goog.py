@@ -34,7 +34,9 @@ import subprocess
 import argparse
 import time
 import struct
+import platform
 import yubico
+import usb
 from messages import INSTRUCTIONS
 
 __author__ = ["Chris Snijder"]
@@ -67,7 +69,7 @@ def ytg_setup(secret):
         Convert the secret from binary to a hexlified string.
     """
     if len(secret) != 20:
-        print INSTRUCTIONS['en']['short_secret']
+        print(INSTRUCTIONS['en']['short_secret'])
         exit(1)
     return binascii.hexlify(secret)
 
@@ -78,10 +80,24 @@ def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
         Instead of using a supplied secret, let the Yubikey do the
         challenge response.
     """
-    yk = yubico.find_yubikey(debug=False)
+    try:
+        yk = yubico.find_yubikey(debug=False)
+    except yubico.yubikey_base.YubiKeyError as exc:
+        print(exc.reason)
+        exit(2)
+    except usb.core.USBError as exc:
+        if exc.errno == 13:
+            print("Can't access your Yubikey, permission denied.")
+            if platform.system() == 'Linux':
+                print(INSTRUCTIONS['en']['usb_error_udev'])
+            exit(2)
+        else:
+            raise
     secret = struct.pack(
         "> Q", int(time.time()) / DEFAULT_STEP).ljust(64, chr(0x0))
+
     response = yk.challenge_response(secret, slot=yubi_slot)
+
     token = '%.*i' % (
         digits,
         yubico.yubico_util.hotp_truncate(response, length=digits)
@@ -147,6 +163,13 @@ def main():
             type=int,
             default=1
         )
+        obj.add_argument(
+            '--digits',
+            metavar='[6/8]',
+            help='How many digits should the output have?',
+            type=int,
+            default=6
+        )
 
     hid.add_argument(
         '--speed',
@@ -155,14 +178,6 @@ def main():
         type=int,
         default=50,
         dest='emulate_speed'
-    )
-
-    hid.add_argument(
-        '--digits',
-        metavar='[6/8]',
-        help='How many digits should the output have?',
-        type=int,
-        default=6
     )
 
     hid.add_argument(
@@ -185,10 +200,11 @@ def main():
             secret = args.pop('secret', None)
             secret = ytg_get_secret(secret)
         if command == 'setup':
-            print INSTRUCTIONS['en']['setup'] % ytg_setup(secret)
+            print(INSTRUCTIONS['en']['setup'].format(ytg_setup(secret)))
         elif command == 'yubi':
-            print INSTRUCTIONS['en']['generate'] % ytg_yubi(
-                args['slot'], args['digits'])
+            print(INSTRUCTIONS['en']['generate'].format(
+                ytg_yubi(args['slot'], args['digits'])
+            ))
         elif command == 'hid':
             ytg_yubi(
                 args['slot'],
@@ -198,7 +214,7 @@ def main():
                 emulate_return=args['emulate_return']
             )
     except KeyboardInterrupt:
-        print ''
+        print()
         exit(1)
 
 
