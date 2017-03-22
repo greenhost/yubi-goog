@@ -43,12 +43,7 @@ __author__ = ["Chris Snijder"]
 __copyright__ = "MIT"
 __license__ = "The MIT License (MIT)"
 __version__ = "0.2"
-__credits__ = (
-                "Loosely Based on yubi-goog.py by Casey Link "
-                "<unnamedrambler@gmail.com>"
-            )
 
-USE_SUDO = False
 DEFAULT_STEP = 30
 
 def ytg_get_secret(secret=None):
@@ -73,13 +68,20 @@ def ytg_setup(secret):
         exit(1)
     return binascii.hexlify(secret)
 
+def _gen_token_mac(yubi_slot, digits):
+    if digits not in (6, 8):
+        print("--digits argument should be 6 or 8.")
+        exit(1)
 
-def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
-             emulate_return=False, emulate_speed=0.05):
-    """
-        Instead of using a supplied secret, let the Yubikey do the
-        challenge response.
-    """
+    cmd = ['/usr/local/bin/ykchalresp', '-t', '-%d' % digits, '-%d' % yubi_slot]
+
+    try:
+        token = subprocess.check_output(cmd).strip()
+    except subprocess.CalledProcessError as exc:
+        sys.exit(1)
+    return token
+
+def _gen_token(yubi_slot, digits):
     try:
         yk = yubico.find_yubikey(debug=False)
     except yubico.yubikey_base.YubiKeyError as exc:
@@ -90,9 +92,13 @@ def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
             print("Can't access your Yubikey, permission denied.")
             if platform.system() == 'Linux':
                 print(INSTRUCTIONS['en']['usb_error_udev'])
+            else:
+                print(exc)
+                raise
             exit(2)
         else:
             raise
+
     secret = struct.pack(
         "> Q", int(time.time()) / DEFAULT_STEP).ljust(64, chr(0x0))
 
@@ -102,6 +108,21 @@ def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
         digits,
         yubico.yubico_util.hotp_truncate(response, length=digits)
     )
+
+
+def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,
+             emulate_return=False, emulate_speed=0.05):
+    """
+        Instead of using a supplied secret, let the Yubikey do the
+        challenge response.
+    """
+    # If we're running on a Mac, we need to use Yubico's CLI tool to bypass
+    # libusb which is broken on Mac.
+    if platform.system() == "Darwin":
+        token = _gen_token_mac(yubi_slot, digits)
+    else:
+        token = _gen_token(yubi_slot, digits)
+
     if emulate_keyboard:
         import pyautogui
         pyautogui.typewrite(token, emulate_speed)

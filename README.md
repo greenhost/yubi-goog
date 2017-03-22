@@ -58,12 +58,12 @@ $ pip install -r requirements.txt
 
 ### On macOS
 
-Make sure you have `pip` and `virtualenv` installed. If you haven't yet, you *can* use homebrew, or any method you prefer. You can find a guide on installing homebrew, pip and virtualenv [here](http://docs.python-guide.org/en/latest/starting/install/osx/).
+Make sure you have `pip` and `virtualenv` and `ykchalresp` installed. If you haven't yet, you *can* use homebrew, or any method you prefer. You can find a guide on installing homebrew, pip and virtualenv [here](http://docs.python-guide.org/en/latest/starting/install/osx/).
 
 Installing dependencies using homebrew:
 
 ```console
-$ brew install git python
+$ brew install git python ykpers
 $ git clone https://github.com/greenhost/yubi-goog ./
 $ cd yubi-goog
 $ virtualenv ./env
@@ -105,6 +105,42 @@ Positional arguments:
 
 Options for each sub-command can be discovered with the `-h` flag, e.g.:
 
+### Keyboard shortcuts
+
+#### Linux
+
+Find keyboard shortcuts in the preferences of your window manager and add an entry, it should allow you to start commands directly. Alternatively install [`xbindkeys`](http://www.nongnu.org/xbindkeys/xbindkeys.html) and follow it's instructions to create a shortcut that is not window manager dependent.
+
+The command you enter into the shortcut should contain the full path to the python executable in the virtualenv you created followed by the full path of the `yubi_goog.py` file, followed by `hid` and any additional arguments, such as `--return` to emulate pressing return after entering the numbers. All together:
+
+```
+[PATH TO YOUR yubi-goog DIR]/env/bin/python [PATH TO YOUR yubi-goog DIR]/yubi_goog.py hid --return
+```
+
+#### macOS
+
+If you are running this on macOS there is no easy way of running the command simply by a short-cut. Instead you need to create an Automator Service that runs the command.
+
+Steps:
+
+ 1. Open automator, choose *New document*, select *Service*.
+ 2. In the left panel, click on *Utilities*, then *Run Shell Script*.
+ 3. Paste the following into the Shell Script panel:
+ ```
+ YUBI_GOOG_DIR=~/[PATH TO YOUR yubi-goog DIR]
+ $YUBI_GOOG_DIR/env/bin/python $YUBI_GOOG_DIR/yubi_goog.py hid --return
+ ```
+ Replace `[PATH TO YOUR yubi-goog DIR]` by the directory where you installed `yubi-goog` (without brackets).
+ 4. Save as "YubiGoog".
+ 5. Go to *System Preferences* and click on *Keyboard*, select the *Shorcut* tab.
+ 6. Select *Services* in the left column and scroll down to find "YubiGoog", click on it.
+ 7. Click on *Add Shorcut* now press `Cmd+Y` or any other keyboard shortcut you prefer.
+
+You should now be able to get 2FA tokens by pressing `Cmd+Y`.
+
+
+### Other options
+
 ```console
 $ ./yubi_goog.py hid -h
 usage: ./yubi_goog.py hid [-h] [-s [secret]] [--slot [1/2]] [--speed [50ms]]
@@ -119,3 +155,4 @@ optional arguments:
   --return              Should I press enter after entering your token?
                         (emulation)
 ```
+
