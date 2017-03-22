@@ -1,37 +1,84 @@
 # yubi-goog
 
-Google Authenticator is great, but I don't really want to be tied to my mobile
-phone for logging into Google Services. Yubikey is the ideal form factor for a
-two-factor authentication device, so why not integrate the two?
+If you're not using 2 factor authentication, you're doing it wrong. Nowadays, lot's of services offer 2FA, often based on TOTP or "Google Authenticator". But TOTP usually requires you to use an app to generate tokens. Generating tokens can be tedious. When you want to login to a service, you need to:
 
-**Well now, you can!**
+ 1. Take out your phone and unlock it.
+ 2. Start up the TOTP/Google Authenticator app and generate a token.
+ 3. Manually type it into the field, before it expires.
+
+What if we could reduce this to:
+
+ 1. Plugin your yubikey
+ 2. Press `Ctrl+Y` or `Cmd+Y` or whatever shortcut you prefer.
+
+Besides, if you are a yubikey user, chances are, step 1 is already completed anyway, so you can authenticate with just the shortcut.
+
+## Caveats
+
+If this all sounds too good to be true, well maybe it is..
+
+ - Your Yubikey only has 2 slots, you can only use this for a maximum of 2 services, assuming they are even empty.
+ - It is not common for services to let you choose your own key, Yubikeys require a key length of 160 bits, which means your secret in hexadecimal form should be 20 characters long for this to work.
+ - You need access to your key in the first place. Most interfaces allow you to manually enter the secret into an app, in case the app doesn't support scanning QR-codes, or scanning fails. If the interface doesn't show your key, you would need to extract it from the QR-code or from the app.
 
 ## Prerequisites
 
 * Python >=2.7
 * Yubikey
-* [Cross-platform GUI Personalization tool][tool] (for setting up your Yubikey)
 
 ## Installation
 
-We recommend you create a "virtualenv" to prevent the dependencies from
-cluttering your system
+You will need to setup your Yubikey with the Yubikey personalisation tool, you can download it [here](https://www.yubico.com/support/knowledge-base/categories/articles/yubikey-personalization-tools/). Instead you can install [`ykpersonalize`](https://github.com/Yubico/yubikey-personalization) if you prefer a command line tool.
 
-``` bash
-# If you haven't already:
-apt-get install virtualenv
+We recommend you create a "virtualenv" to prevent the dependencies from cluttering your system.
 
-git clone https://github.com/greenhost/yubi-goog ./
-cd yubi-goog
-virtualenv ./env
-source ./env/bin/activate
-pip install -r requirements.txt
-chmod u+x yubi_goog.py
+If you haven't already, install `virtualenv` and `pip`. Optionally you can install `git` but if you don't want to, you can download the zipped source code directly [zip](https://github.com/greenhost/yubi-goog/archive/master.zip) and unzip it (the commands below assume you will use git).
+
+### On Debian/Ubuntu
+
+``` console
+$ sudo apt-get install git-all python-setuptools virtualenv
+$ git clone https://github.com/greenhost/yubi-goog ./
+$ cd yubi-goog
+$ virtualenv ./env
+$ source ./env/bin/activate
+$ pip install -r requirements.txt
 ```
+
+### On Fedora/CentOS/Redhat
+
+``` console
+$ sudo yum install git-all python-pip python-virtualenv
+$ git clone https://github.com/greenhost/yubi-goog ./
+$ cd yubi-goog
+$ virtualenv ./env
+$ source ./env/bin/activate
+$ pip install -r requirements.txt
+```
+
+### On macOS
+
+Make sure you have `pip` and `virtualenv` installed. If you haven't yet, you *can* use homebrew, or any method you prefer. You can find a guide on installing homebrew, pip and virtualenv [here](http://docs.python-guide.org/en/latest/starting/install/osx/).
+
+Installing dependencies using homebrew:
+
+```console
+$ brew install git python
+$ git clone https://github.com/greenhost/yubi-goog ./
+$ cd yubi-goog
+$ virtualenv ./env
+$ source ./env/bin/activate
+$ pip install pyobjc-core 
+$ pip install pyobjc 
+$ pip install -r requirements.txt
+```
+
+## Usage
+
 You should now be able to run this to test everything works:
 
-``` bash
-$ ./yubi_goog.py -h
+```console
+$ python ./yubi_goog.py -h
 usage: ./yubi_goog.py [-h] [subcommands] ...
 
 Generate TOTP token with your Yubikey.
@@ -47,25 +94,14 @@ Positional arguments:
 
 ```
 
-## Usage
-
-1. Set up Google Authenticator on your Google settings like you would for a
-   mobile phone.
-2. Below the QR code, press the expand button so you can see your base32-encoded
-   secret key.
-3. Run `./yubi_goog.py setup` this will prompt you for your base32-encoded
-   secret and output a result in hex.
-4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key.
-   I had to use the [GUI tool available from Yubico][tool]
-   Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64`.
-   This will insert the secret in slot 2 of your yubikey (use -1 for slot 1)
-5. Whenever you are prompted for a one-time password from google, just run
-   `./yubi_goog.py yubi` and the output will be a one-time password usable for
+1. Set up TOTP/"Google Authenticator" with a Google Authenticator app, at the service you want to use your Yubikey with. You will probably want to use the app as a backup so don't delete the account when you're done.
+2. Usually somewhere near the QR code, there is a string of random characters between 15 and 20 characters long, this is your secret.
+3. Run `./yubi_goog.py setup` this will prompt you for your base32-encoded   secret and output a result in hex.
+4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key using the [GUI tool available from Yubico][tool]. Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64`. This will insert the secret in slot 2 of your yubikey (use -1 for slot 1)
+5. Whenever you are prompted for a one-time password from google, just run `./yubi_goog.py yubi` and the output will be a one-time password usable for
    up to one minute 30 seconds.
-
-    Alternatively, run `./yubi_goog.py hid` to employ keyboard emulation that
-    will type the token for you.
-    __Hint:__ Use this with a keyboard shortcut!
+  Alternatively, run `./yubi_goog.py hid` to employ keyboard emulation that will type the token for you.
+  __Hint:__ Use this with a keyboard shortcut!
 
 Options for each sub-command can be discovered with the `-h` flag, e.g.:
 
@@ -83,5 +119,3 @@ optional arguments:
   --return              Should I press enter after entering your token?
                         (emulation)
 ```
-
-[tool]: http://wiki.yubico.com/files/YubiKey%20Personalization%20Tool%20Installer-lin.tgz
