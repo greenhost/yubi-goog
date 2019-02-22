@@ -46,6 +46,7 @@ __version__ = "0.2"
 
 DEFAULT_STEP = 30
 
+
 def ytg_get_secret(secret=None):
     """
         Get the secret from the command line arguments or ask for it
@@ -68,6 +69,7 @@ def ytg_setup(secret):
         exit(1)
     return binascii.hexlify(secret)
 
+
 def _gen_token_mac(yubi_slot, digits):
     if digits not in (6, 8):
         print("--digits argument should be 6 or 8.")
@@ -80,6 +82,7 @@ def _gen_token_mac(yubi_slot, digits):
     except subprocess.CalledProcessError as exc:
         sys.exit(1)
     return token
+
 
 def _gen_token(yubi_slot, digits):
     try:
@@ -98,9 +101,8 @@ def _gen_token(yubi_slot, digits):
             exit(2)
         else:
             raise
-
     secret = struct.pack(
-        "> Q", int(time.time()) / DEFAULT_STEP).ljust(64, chr(0x0))
+        "> Q", int(time.time()) // DEFAULT_STEP).ljust(64, b"\x00")
 
     response = yk.challenge_response(secret, slot=yubi_slot)
 
@@ -108,6 +110,7 @@ def _gen_token(yubi_slot, digits):
         digits,
         yubico.yubico_util.hotp_truncate(response, length=digits)
     )
+    return token
 
 
 def ytg_yubi(yubi_slot=1, digits=6, emulate_keyboard=False,

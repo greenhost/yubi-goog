@@ -23,7 +23,7 @@ If this all sounds too good to be true, well maybe it is..
 
 ## Prerequisites
 
-* Python >=2.7
+* Python >=2.7 / >=3.5
 * Yubikey
 
 ## Installation

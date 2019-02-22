@@ -23,15 +23,15 @@ INSTRUCTIONS = {
                         '.rules\n'
                         'SUBSYSTEMS=="usb", ATTRS{idVendor}=="1050", ATTRS'
                         '{idProduct}=="0111|0113|0114|0115|0116|0120|0402|0403'
-                        '|0406|0407|0410", TAG+="uaccess"\n\n'
+                        '|0406|0407|0410", TAG+="uaccess"\nEOF\n\n'
                         'Then remove your Yubikey and plug it back in.'
                     )
     }
 }
 
 for msg_blck in [INSTRUCTIONS]:
-    for lang, messages in msg_blck.iteritems():
-        for key, msg in messages.iteritems():
+    for lang, messages in msg_blck.items():
+        for key, msg in messages.items():
             msg_blck[lang][key] = re.sub(
                 r'\ {2,100}',
                 ' ',

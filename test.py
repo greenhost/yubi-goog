@@ -35,5 +35,6 @@ class TestYubiGoog(unittest.TestCase):
 
         self.assertEqual(hexlified, ytg_setup(self.secret_bin))
 
+
 if __name__ == '__main__':
     unittest.main()
