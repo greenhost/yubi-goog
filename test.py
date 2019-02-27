@@ -4,7 +4,7 @@
 
 import unittest
 import binascii
-from yubi_goog import ytg_get_secret, ytg_setup, ytg_yubi
+from yubigoog.__main__ import ytg_get_secret, ytg_setup
 
 
 class TestYubiGoog(unittest.TestCase):
