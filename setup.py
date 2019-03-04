@@ -23,7 +23,7 @@ setup(
         'PyAutoGUI>=0.9.41',
         'python3-xlib>=0.15',
         'keyboard>=0.13.2',
-        'python-yubico>=1.3.2',
+        'python-yubico>=1.3.3',
     ],
     license='MIT',
     classifiers=[
