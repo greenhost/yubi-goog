@@ -2,7 +2,7 @@
 """
 Python setuptools script for ``yubu_goog`` tool.
 """
-from yubigoog.yubigoog import __version__
+from yubigoog import __version__
 from setuptools import setup
 
 setup(

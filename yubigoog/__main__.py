@@ -67,6 +67,14 @@ def parse_args():
         help='Output TOTP token generatd by Yubikey.'
     )
 
+    generate = sparser.add_parser(
+        'generate',
+        help=(
+            'Generate a yubikey compatible secret. Use this only if you can'
+            ' choose your own secret value in an application (not common).'
+        )
+    )
+
     setup.add_argument(
         '-s',
         '--secret',
@@ -76,7 +84,17 @@ def parse_args():
         type=str
     )
 
-    for obj in (yubi, hid):
+    generate.add_argument(
+        '-n',
+        '--length',
+        required=False,
+        metavar='[128/160]',
+        default=160,
+        help='Specify a length in bits. (default: 160)',
+        type=int
+    )
+
+    for obj in (yubi, hid, generate):
         obj.add_argument(
             '--slot',
             required=False,
@@ -98,6 +116,14 @@ def parse_args():
             help=(
                 'Enable debug mode (outputs some python-yubico debug '
                 'messages.'
+            ),
+            action='store_true'
+        )
+        obj.add_argument(
+            '--expert',
+            help=(
+                'Reduces error checking, allows uncommon values to be chosen,'
+                ' e.g.: secrets with a non-standard length.'
             ),
             action='store_true'
         )

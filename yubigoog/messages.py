@@ -16,18 +16,20 @@ messages = {
             "secrets. Some sites, perhaps the one you want to use this tool "
             "with, just prints it somewhere around the QR code you would "
             "normally scan (do that too, it\'s your backup ;) ). It looks "
-            "something like: \"\033[01;32mKKOSPR32DCX67EUIUSHE\033[0m\".\n\n"
+            "something like: "
+            "\"\033[01;32mBCZPBZH4MDODISMXO4OUWPFUT2LBLQGN\033[0m\".\n\n"
             "Another way to retrieve them is by finding a tool that can "
             "decode a QR code, such as a generic QR code reader app.\n"
             "The data you are looking for when decoding a QR code manually "
             " looks like this (green): "
             "otpauth://totp/Application:alice@appdomain.tld?"
-            "secret=\033[01;32mKKOSPR32DCX67EUIUSHE\033[0m&issuer=Application"
+            "secret=\033[01;BCZPBZH4MDODISMXO4OUWPFUT2LBLQGN\033[0m&"
+            "issuer=Application"
         ),
-        "generate": "Your generated TOTP token: \033[01;32m{}\033[0m",
+        "totp": "Your generated TOTP token: \033[01;32m{}\033[0m",
         "short_secret": (
-            "Your secret needs to be 20 characters long for this to work "
-            "(160 bit secret)."
+            "Your secret needs to be 32 characters long for this to work "
+            "(80 or 160 bit secret)."
         ),
         "usb_error_udev": (
             "To allow this tool to access your Yubikey, you need to run the "
@@ -48,7 +50,14 @@ messages = {
         "need_sudo": (
             "The --no-x argument requires sudo because it emulates a hardware "
             "keyboard, bypassing the window manager."
-        )
+        ),
+        "not_common_totp_val": (
+            "TOTP usually uses a secret of 80 or 160 bits, this tool uses "
+            "the Yubikey's HOTP feature and provides it the current time as a "
+            "challenge. Yubikeys default to a secret of 160 bytes. Please "
+            "enter a secret length of 80 or 160."
+        ),
+        "generate": "Your TOTP secret: \033[01;32m{}\033[0m"
     }
 }
 

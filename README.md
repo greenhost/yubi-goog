@@ -68,8 +68,8 @@ $ git clone https://github.com/greenhost/yubi-goog ./
 $ cd yubi-goog
 $ virtualenv ./env
 $ source ./env/bin/activate
-$ pip install pyobjc-core 
-$ pip install pyobjc 
+$ pip install pyobjc-core
+$ pip install pyobjc
 $ pip install -r requirements.txt
 ```
 
@@ -97,7 +97,7 @@ Positional arguments:
 1. Set up TOTP/"Google Authenticator" with a Google Authenticator app, at the service you want to use your Yubikey with. You will probably want to use the app as a backup so don't delete the account when you're done.
 2. Usually somewhere near the QR code, there is a string of random characters between 15 and 20 characters long, this is your secret.
 3. Run `./yubi_goog.py setup` this will prompt you for your base32-encoded   secret and output a result in hex.
-4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key using the [GUI tool available from Yubico][tool]. Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64`. This will insert the secret in slot 2 of your yubikey (use -1 for slot 1)
+4. Program that secret into your Yubikey as a HMAC-SHA1 challenge-response key using the [GUI tool available from Yubico][tool]. Alternatively, use `ykpersonalize -2 -ochal-resp -ochal-hmac -ohmac-lt64 -a0000000000000000000000000000000000000000`. This will insert the secret (`0000000000000000000000000000000000000000`) in slot 2 of your yubikey (use -1 for slot 1)
 5. Whenever you are prompted for a one-time password from google, just run `./yubi_goog.py yubi` and the output will be a one-time password usable for
    up to one minute 30 seconds.
   Alternatively, run `./yubi_goog.py hid` to employ keyboard emulation that will type the token for you.

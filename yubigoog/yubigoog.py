@@ -27,6 +27,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+import os
 import base64
 import re
 import binascii
@@ -34,16 +35,11 @@ import subprocess
 import time
 import struct
 import platform
-import yubico
 import usb
 import yubigoog.messages as messages
+import yubico
 
 DEFAULT_STEP = 30
-
-__author__ = ["Chris Snijder"]
-__copyright__ = "MIT"
-__license__ = "The MIT License (MIT)"
-__version__ = "0.2"
 
 
 class YubiGoog:
@@ -56,13 +52,12 @@ class YubiGoog:
         command = self.args['command']
         if command == 'setup':
             self.ytg_setup()
-        elif command == 'yubi':
-            self.msg('generate', self.ytg_yubi())
         elif command == 'hid':
             self.ytg_yubi(True)
+        elif command == 'generate':
+            self.msg('generate', self.generate_secret())
         else:
-            print("Invalid command given.")
-            exit(99)
+            self.msg('totp', self.ytg_yubi())
 
     def ytg_get_secret(self):
         """Get secret from CLI args or ask for it interactively if not set."""
@@ -79,10 +74,12 @@ class YubiGoog:
         """Convert the secret from binary to a hexlified string."""
         secret = self.ytg_get_secret()
         # TODO: find out how to do this with more common 128 bit secrets
-        if len(secret) != 20:
+        if len(secret) not in [10, 20] and not self.args.expert:
             self.msg('short_secret')
             exit(1)
-        secret = binascii.hexlify(secret)
+        secret = binascii.hexlify(secret).decode('utf-8')
+        # Pad the string with zeroes if it is shorter than 20 bytes.
+        secret = secret.ljust(40, "0")
         self.msg('setup', secret)
 
     def _gen_token_mac(self, yubi_slot, digits):
@@ -99,13 +96,13 @@ class YubiGoog:
         slot = self.args.get('slot', 1)
         digits = self.args.get('digits', 6)
 
-        if digits not in (6, 8):
+        if digits not in (6, 8) and not self.args['expert']:
             self.msg('num_digits')
             exit(1)
 
         # If we're running on a Mac, we need to use Yubico's CLI tool to bypass
         # libusb which is broken on Mac.
-        if platform.system() == "Darwin":
+        if platform.system() == 'Darwin':
             return self._gen_token_mac(slot, digits)
 
         try:
@@ -125,7 +122,7 @@ class YubiGoog:
             else:
                 raise
         # Convert time to struct
-        secret = struct.pack("> Q", int(time.time()) // DEFAULT_STEP)
+        secret = struct.pack('> Q', int(time.time()) // DEFAULT_STEP)
         # Pad the struct time with zero bytes
         secret = secret.ljust(64, b"\x00")
 
@@ -149,15 +146,30 @@ class YubiGoog:
                     import yubigoog.emulate_hid_x as emulate_hid
                     emulate_hid.token_entry(token, do_return, delay)
                 except Xlib.error.XauthError:
-                    self.msg("maybe_no_x_server")
+                    self.msg('maybe_no_x_server')
             else:
                 try:
                     import yubigoog.emulate_hid_no_x as emulate_hid
                     emulate_hid.token_entry(token, do_return, delay)
                 except ImportError:
-                    self.msg("need_sudo")
+                    self.msg('need_sudo')
         else:
             return token
+
+    def generate_secret(self):
+        """Generate a TOTP compatible base32 encoded secret."""
+        bits = self.args.get('length')
+        # Bits should dividable by 8, because we will ask the os for random
+        # bytes and because we can't encode partial bytes. Base32 will cause a
+        # 160% inflation of the data and we can't have padding for TOTP secrets
+        # so `bits * 1.6` can not be a fraction.
+        if (bits % 8 > 0):
+            self.msg('not_common_totp_val')
+            exit(2)
+        if bits not in [80, 160] and not self.args['expert']:
+            self.msg('not_common_totp_val')
+            exit(2)
+        return base64.b32encode(os.urandom(bits // 8)).decode('utf-8')
 
     def msg(self, message, format_args=None):
         """Print instruction from the message file, optionally format it."""
